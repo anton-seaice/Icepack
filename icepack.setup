@@ -7,6 +7,8 @@ if (-e columnphysics/version.txt) then
 endif
 set ICE_SCRIPTS = "${ICE_SANDBOX}/configuration/scripts"
 set initargv = ( $argv[*] ) 
+set ICE_MACHINE_WKDIR = /g/data/tm70/as2285/icepack-dirs/runs
+set ICE_MACHINE_INPUTDATA = /g/data/ik11/inputs/CICE_data/icepack-dirs/input
 
 set helpheader = 0
 set dash = "-"
