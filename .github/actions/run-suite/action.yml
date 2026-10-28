@@ -1,0 +1,51 @@
+name: Run test suite
+description: >
+  Check case and test setup, run the test suites with the conda machine,
+  print the tail of each run log, and report the results.
+
+inputs:
+  model:
+    description: Model name, icepack or cice (selects <model>.setup)
+    required: true
+  envdef:
+    description: Conda machine environment, macos or linux
+    required: true
+  testsuites:
+    description: Comma-separated test suites
+    required: true
+  testid:
+    description: Test id, used for the testsuite.<testid> directory
+    required: true
+  pes:
+    description: Processor layout for the setup check case
+    required: false
+    default: 1x1
+
+runs:
+  using: composite
+  steps:
+    - name: check setup case
+      shell: /bin/csh -e {0}
+      run: |
+        ./${{ inputs.model }}.setup -m conda -e ${{ inputs.envdef }} -c case0${{ inputs.testid }} --pes ${{ inputs.pes }} -s diag1
+
+    - name: check setup test
+      shell: /bin/csh -e {0}
+      run: |
+        ./${{ inputs.model }}.setup -m conda -e ${{ inputs.envdef }} --test smoke --testid c0${{ inputs.testid }}
+
+    - name: run suite
+      shell: /bin/csh -e {0}
+      run: |
+        ./${{ inputs.model }}.setup -m conda -e ${{ inputs.envdef }} --suite ${{ inputs.testsuites }} --testid ${{ inputs.testid }}
+
+    - name: write output
+      shell: /bin/csh -e {0}
+      run: |
+        foreach logfile (testsuite.${{ inputs.testid }}/*/logs/${{ inputs.model }}.runlog*)
+          echo "### ${logfile} ###"
+          tail -20 $logfile
+          echo " "
+        end
+        cd testsuite.${{ inputs.testid }}
+        ./results.csh

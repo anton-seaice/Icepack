@@ -1,0 +1,65 @@
+name: Setup conda environment
+description: >
+  Install tcsh (linux), print system info, create the <model>-dirs directories,
+  and create and activate the model conda environment with micromamba.
+  Shared by the Icepack and CICE workflows.
+
+inputs:
+  model:
+    description: Model name, icepack or cice (used for the ~/<model>-dirs directories)
+    required: true
+  environment-file:
+    description: Conda environment file, relative to the workspace
+    required: false
+    default: configuration/scripts/machines/environment.yml
+
+runs:
+  using: composite
+  steps:
+    - name: install linux tcsh
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tcsh
+
+    - name: system info
+      shell: bash
+      run: |
+        type wget
+        type curl
+        type csh
+        echo "readlink \$(which csh): $(readlink -f $(which csh))"
+        echo "csh --version: $(csh --version)"
+        echo "uname -a: $(uname -a)"
+        if [ "$RUNNER_OS" = "macOS" ]; then sw_vers; fi
+        echo "HOME: $HOME"
+        echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+
+    - name: create directories
+      shell: bash
+      run: |
+        mkdir -p ${HOME}/${{ inputs.model }}-dirs/runs ${HOME}/${{ inputs.model }}-dirs/baseline ${HOME}/${{ inputs.model }}-dirs/input
+
+    - name: setup conda env
+      id: micromamba
+      uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
+      with:
+        environment-file: ${{ inputs.environment-file }}
+        cache-environment: true
+        init-shell: none
+
+    - name: activate conda env
+      shell: bash
+      run: |
+        echo "CONDA_PREFIX=${{ steps.micromamba.outputs.environment-path }}" >> $GITHUB_ENV
+        echo "${{ steps.micromamba.outputs.environment-path }}/bin" >> $GITHUB_PATH
+
+    - name: check conda env
+      shell: bash
+      run: |
+        for exe in clang gcc gfortran make mpicc mpifort; do
+          if command -v $exe > /dev/null; then
+            echo "$(command -v $exe): $($exe --version | head -1)"
+          fi
+        done

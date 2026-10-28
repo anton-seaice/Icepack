@@ -1,0 +1,29 @@
+name: Get input data
+description: Download input data tarballs, verify their sha256 checksums, and untar them.
+
+inputs:
+  model:
+    description: Model name, icepack or cice (data goes in ~/<model>-dirs/input)
+    required: true
+  files:
+    description: One "<url> <sha256>" pair per line
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: download input data
+      shell: bash
+      env:
+        FILES: ${{ inputs.files }}
+      run: |
+        set -e
+        cd ${HOME}/${{ inputs.model }}-dirs/input
+        while read -r url sha; do
+          [ -z "$url" ] && continue
+          file=$(basename "$url")
+          curl -sSfL -o "$file" "$url"
+          echo "$sha  $file" | shasum -a 256 -c -
+          tar xzf "$file"
+        done <<< "$FILES"
+        ls -alR

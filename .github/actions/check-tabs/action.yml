@@ -1,0 +1,23 @@
+name: Check for tabs
+description: Fail if any Fortran or C source file under the given paths contains a tab.
+
+inputs:
+  paths:
+    description: Space-separated directories to search, relative to the workspace
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: check for tabs
+      shell: bash
+      run: |
+        cnt=0
+        for file in $(find -P ${{ inputs.paths }} -iname "*.f*" -o -iname "*.c*"); do
+          fcnt=$(grep -c $'\t' "$file" || true)
+          if [ "$fcnt" -gt 0 ]; then
+            echo "TAB found: $fcnt $file"
+            cnt=$((cnt + fcnt))
+          fi
+        done
+        [ "$cnt" -eq 0 ]
